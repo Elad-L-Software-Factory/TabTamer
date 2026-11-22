@@ -27,6 +27,8 @@ export interface AppState {
   summary: TabSummary;
   tabs: BrowserTab[];
   savedCount: number;
+  /** e.g. "TabTamer v0.3.0 · build 74ba385" */
+  version: string;
 }
 
 /** The API the preload script exposes to the screens as window.tabtamer. */

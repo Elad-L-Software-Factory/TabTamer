@@ -13,6 +13,7 @@ import { Store } from './store';
 import { SweepSession } from './sweepSession';
 import { TriageSession } from './triageSession';
 import { trayIcon } from './trayIcon';
+import { versionLabel } from './version';
 
 const BROWSER_LABEL: Record<BrowserKind, string> = { chrome: 'Chrome', edge: 'Edge' };
 const ACTIONS: TriageAction[] = ['forget', 'save', 'theme'];
@@ -40,6 +41,7 @@ function state(): AppState {
     summary: hub.summary(),
     tabs: hub.registry.allTabs(),
     savedCount: store?.saved.length ?? 0,
+    version: versionLabel(),
   };
 }
 
@@ -155,6 +157,8 @@ async function start(): Promise<void> {
   tray = new Tray(trayIcon(null));
   tray.setContextMenu(
     Menu.buildFromTemplate([
+      { label: versionLabel(), enabled: false },
+      { type: 'separator' },
       { label: 'Open TabTamer', click: showWindow },
       { type: 'separator' },
       {
