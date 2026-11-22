@@ -46,13 +46,15 @@ set ELECTRON_RUN_AS_NODE=1
 "@ | Set-Content -Path $Cmd -Encoding ascii
 
 $HostManifest = Join-Path $Dir "$HostName.json"
-@{
+$Json = @{
   name            = $HostName
   description     = 'TabTamer native messaging relay'
   path            = $Cmd
   type            = 'stdio'
   allowed_origins = @("chrome-extension://$ExtId/")
-} | ConvertTo-Json | Set-Content -Path $HostManifest -Encoding utf8
+} | ConvertTo-Json
+# Chrome rejects a UTF-8 byte-order mark, which Windows PowerShell's -Encoding utf8 adds.
+[System.IO.File]::WriteAllText($HostManifest, $Json, [System.Text.UTF8Encoding]::new($false))
 
 foreach ($k in $Keys) {
   New-Item -Path $k -Force | Out-Null

@@ -35,17 +35,18 @@ function connect(): void {
   if (port) return;
   try {
     port = chrome.runtime.connectNative(NATIVE_HOST_NAME);
-  } catch {
+  } catch (err) {
     port = null;
-    setStatus(false);
+    setStatus(false, err instanceof Error ? err.message : String(err));
     return;
   }
   port.onMessage.addListener((raw: unknown) => void handleCommand(raw));
   port.onDisconnect.addListener(() => {
-    // Reading lastError marks it as handled (the app may simply not be installed yet).
-    void chrome.runtime.lastError;
+    // Reading lastError marks it as handled; keep the browser's reason for troubleshooting.
+    const reason = chrome.runtime.lastError?.message;
+    if (reason) console.warn('TabTamer: native connection closed:', reason);
     port = null;
-    setStatus(false);
+    setStatus(false, reason);
   });
   send({
     type: 'hello',
@@ -66,12 +67,13 @@ function send(message: HelperMessage): void {
   }
 }
 
-function setStatus(connected: boolean): void {
+function setStatus(connected: boolean, reason?: string): void {
   void chrome.action.setBadgeText({ text: connected ? '' : '!' });
   void chrome.action.setBadgeBackgroundColor({ color: '#F08C00' });
-  void chrome.action.setTitle({
-    title: connected ? 'TabTamer is connected' : 'TabTamer app is not running',
-  });
+  const offline = reason
+    ? `TabTamer can't reach the app (${reason}). Click to retry.`
+    : "TabTamer can't reach the app. Click to retry.";
+  void chrome.action.setTitle({ title: connected ? 'TabTamer is connected' : offline });
 }
 
 // ---------- Tabs ----------
