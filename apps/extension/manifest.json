@@ -5,7 +5,8 @@
   "version": "0.1.0",
   "description": "Lets the TabTamer app see and tidy your tabs. Works only with the TabTamer app installed on your PC.",
   "minimum_chrome_version": "116",
-  "permissions": ["tabs", "nativeMessaging", "alarms"],
+  "permissions": ["tabs", "nativeMessaging", "alarms", "tabGroups", "scripting"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js",
     "type": "module"

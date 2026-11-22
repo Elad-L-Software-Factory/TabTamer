@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import type { BrowserKind, BrowserTab } from '@tabtamer/core';
 import type { AppState } from '../main/ipc';
 import { Favicon } from './Favicon';
+import { TabLink } from './TabLink';
 
 const LABEL: Record<BrowserKind, string> = { chrome: 'Chrome', edge: 'Edge' };
 const ALL: BrowserKind[] = ['chrome', 'edge'];
 
-export function Home({ onTame }: { onTame: () => void }) {
+export function Home({ onTame, onSaved }: { onTame: () => void; onSaved: () => void }) {
   const [state, setState] = useState<AppState | null>(null);
 
   useEffect(() => {
@@ -54,6 +55,13 @@ export function Home({ onTame }: { onTame: () => void }) {
         >
           Tame my tabs
         </button>
+        <button
+          type="button"
+          onClick={onSaved}
+          className="mt-3 text-sm text-brand-dark hover:underline"
+        >
+          Saved tabs ({state.savedCount})
+        </button>
       </section>
 
       {noneConnected ? (
@@ -77,9 +85,9 @@ function TabList({ tabs }: { tabs: BrowserTab[] }) {
           className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white"
         >
           <Favicon url={t.favIconUrl} />
-          <span className="min-w-0 flex-1 truncate text-sm" title={t.url}>
-            {t.title || t.url}
-          </span>
+          <div className="min-w-0 flex-1">
+            <TabLink browser={t.browser} tabId={t.id} title={t.title || t.url} />
+          </div>
           <span className="text-xs text-gray-400">{LABEL[t.browser]}</span>
           <button
             type="button"

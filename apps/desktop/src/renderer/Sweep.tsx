@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { SWEEP_GROUPS, type BrowserKind } from '@tabtamer/core';
 import type { SweepRow } from '../main/ipc';
 import { Favicon } from './Favicon';
+import { TabLink } from './TabLink';
 
 const LABEL: Record<BrowserKind, string> = { chrome: 'Chrome', edge: 'Edge' };
 
@@ -75,10 +76,11 @@ export function Sweep({
           <p className="text-gray-600">No junk or duplicate tabs right now. Nice and tidy!</p>
           <button
             type="button"
-            onClick={onCancel}
+            onClick={() => onDone(0)}
+            autoFocus
             className="mt-4 rounded-xl bg-brand px-6 py-2.5 font-semibold text-white hover:bg-brand-dark"
           >
-            Back
+            Next: go through my tabs
           </button>
         </section>
       ) : (
@@ -138,22 +140,15 @@ export function Sweep({
                           />
                           <Favicon url={r.favIconUrl} />
                           <div className="min-w-0 flex-1">
-                            <button
-                              type="button"
-                              onClick={() => void window.tabtamer.focusTab(r.browser, r.tabId)}
-                              title="Show this tab in the browser"
-                              className="block w-full truncate text-left text-sm hover:text-brand-dark hover:underline"
-                            >
-                              {r.title}
-                            </button>
-                            <div
-                              className="truncate text-xs text-gray-400"
-                              title={
+                            <TabLink
+                              browser={r.browser}
+                              tabId={r.tabId}
+                              title={r.title}
+                              sub={`${r.site} · ${g.why}`}
+                              subTitle={
                                 r.keepTitle ? `The copy that stays open: ${r.keepTitle}` : undefined
                               }
-                            >
-                              {r.site} · {g.why}
-                            </div>
+                            />
                           </div>
                           <span className="shrink-0 text-xs text-gray-400">{LABEL[r.browser]}</span>
                         </li>
@@ -176,8 +171,9 @@ export function Sweep({
             </button>
             <button
               type="button"
-              onClick={onCancel}
+              onClick={() => onDone(0)}
               className="rounded-xl border border-gray-300 px-5 text-gray-700 hover:bg-gray-50"
+              title="Keep these open and go to the next step"
             >
               Skip
             </button>

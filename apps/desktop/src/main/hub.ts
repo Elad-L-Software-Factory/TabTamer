@@ -13,6 +13,8 @@ import {
   parseHelperMessage,
   type AppCommand,
   type BrowserKind,
+  type PageTextsMessage,
+  type ResultMessage,
   type TabSummary,
   type TabToOpen,
 } from '@tabtamer/core';
@@ -48,6 +50,77 @@ export class BrowserHub extends EventEmitter<{ change: [TabSummary] }> {
 
   summary(): TabSummary {
     return this.registry.summary();
+  }
+
+  private pending = new Map<
+    string,
+    { resolve: (m: ResultMessage | PageTextsMessage | null) => void; timer: NodeJS.Timeout }
+  >();
+
+  /** Send a command and wait for the helper's reply (null if not connected or no reply in time). */
+  private request(
+    browser: BrowserKind,
+    command: AppCommand,
+    timeoutMs: number,
+  ): Promise<ResultMessage | PageTextsMessage | null> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(command.requestId);
+        resolve(null);
+      }, timeoutMs);
+      this.pending.set(command.requestId, { resolve, timer });
+      if (!this.send(browser, command)) {
+        clearTimeout(timer);
+        this.pending.delete(command.requestId);
+        resolve(null);
+      }
+    });
+  }
+
+  /** First part of each page's text, by tab id. Unreadable tabs are missing from the map. */
+  async getPageTexts(browser: BrowserKind, tabIds: number[]): Promise<Map<number, string>> {
+    const reply = await this.request(
+      browser,
+      { type: 'getPageTexts', v: PROTOCOL_VERSION, requestId: `text-${++this.seq}`, tabIds },
+      30_000,
+    );
+    const map = new Map<number, string>();
+    if (reply?.type === 'pageTexts') for (const t of reply.texts) map.set(t.tabId, t.text);
+    return map;
+  }
+
+  /** Move tabs into a theme window with a labelled group. Returns the window id, or null. */
+  async moveToGroup(
+    browser: BrowserKind,
+    tabIds: number[],
+    windowId: number | undefined,
+    groupTitle: string,
+    groupColor: string,
+  ): Promise<number | null> {
+    const cmd: AppCommand = {
+      type: 'moveToGroup',
+      v: PROTOCOL_VERSION,
+      requestId: `move-${++this.seq}`,
+      tabIds,
+      groupTitle,
+      groupColor,
+      ...(windowId !== undefined ? { windowId } : {}),
+    };
+    const reply = await this.request(browser, cmd, 15_000);
+    return reply?.type === 'result' && reply.ok ? (reply.windowId ?? null) : null;
+  }
+
+  /** Undo a move: put tabs back where they were. */
+  async restoreTabs(
+    browser: BrowserKind,
+    moves: { tabId: number; windowId: number; index: number }[],
+  ): Promise<boolean> {
+    const reply = await this.request(
+      browser,
+      { type: 'restoreTabs', v: PROTOCOL_VERSION, requestId: `restore-${++this.seq}`, moves },
+      15_000,
+    );
+    return reply?.type === 'result' && reply.ok;
   }
 
   /** Close tabs in one browser. Returns false if that browser is not connected. */
@@ -130,6 +203,13 @@ export class BrowserHub extends EventEmitter<{ change: [TabSummary] }> {
       conn.browser = message.browser;
       this.registry.setTabs(message.browser, message.tabs);
       this.emit('change', this.summary());
+    } else {
+      const waiting = this.pending.get(message.requestId);
+      if (waiting) {
+        clearTimeout(waiting.timer);
+        this.pending.delete(message.requestId);
+        waiting.resolve(message);
+      }
     }
   }
 

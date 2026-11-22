@@ -7,7 +7,7 @@ export function Toast({ data, onClose }: { data: ToastData; onClose: () => void 
   return (
     <div
       role="status"
-      className="fixed inset-x-4 bottom-4 flex items-center gap-3 rounded-xl bg-gray-900 px-4 py-3 text-white shadow-lg"
+      className="fixed inset-x-4 top-14 z-30 flex items-center gap-3 rounded-xl bg-gray-900 px-4 py-3 text-white shadow-lg"
     >
       <span className="flex-1">{data.message}</span>
       {data.action && (
