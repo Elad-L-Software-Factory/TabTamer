@@ -14,6 +14,7 @@ import {
   type AppCommand,
   type BrowserKind,
   type TabSummary,
+  type TabToOpen,
 } from '@tabtamer/core';
 
 interface Connection {
@@ -57,6 +58,30 @@ export class BrowserHub extends EventEmitter<{ change: [TabSummary] }> {
       requestId: `close-${++this.seq}`,
       tabIds,
     });
+  }
+
+  /** Bring a tab to the front (peek). */
+  focusTab(browser: BrowserKind, tabId: number): boolean {
+    return this.send(browser, {
+      type: 'focusTab',
+      v: PROTOCOL_VERSION,
+      requestId: `focus-${++this.seq}`,
+      tabId,
+    });
+  }
+
+  /** Reopen tabs (Undo). */
+  openTabs(browser: BrowserKind, tabs: TabToOpen[]): boolean {
+    return this.send(browser, {
+      type: 'openTabs',
+      v: PROTOCOL_VERSION,
+      requestId: `open-${++this.seq}`,
+      tabs,
+    });
+  }
+
+  allTabs() {
+    return this.registry.allTabs();
   }
 
   private send(browser: BrowserKind, command: AppCommand): boolean {

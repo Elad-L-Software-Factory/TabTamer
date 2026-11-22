@@ -7,6 +7,7 @@ import { app, BrowserWindow, ipcMain, Menu, Tray } from 'electron';
 import { BROWSERS, type BrowserKind } from '@tabtamer/core';
 import { BrowserHub } from './hub';
 import { IPC, type AppState } from './ipc';
+import { SweepSession } from './sweepSession';
 import { trayIcon } from './trayIcon';
 
 const BROWSER_LABEL: Record<BrowserKind, string> = { chrome: 'Chrome', edge: 'Edge' };
@@ -22,6 +23,7 @@ let tray: Tray | null = null;
 let win: BrowserWindow | null = null;
 let quitting = false;
 const hub = new BrowserHub();
+const sweep = new SweepSession(hub);
 
 function state(): AppState {
   return { summary: hub.summary(), tabs: hub.registry.allTabs() };
@@ -79,10 +81,19 @@ function showWindow(): void {
 
 async function start(): Promise<void> {
   ipcMain.handle(IPC.getState, () => state());
-  ipcMain.handle(IPC.closeTab, (_e, browser: unknown, tabId: unknown) => {
-    if (!BROWSERS.includes(browser as BrowserKind) || !Number.isInteger(tabId)) return false;
-    return hub.closeTabs(browser as BrowserKind, [tabId as number]);
-  });
+  const validTab = (browser: unknown, tabId: unknown): browser is BrowserKind =>
+    BROWSERS.includes(browser as BrowserKind) && Number.isInteger(tabId);
+  ipcMain.handle(IPC.closeTab, (_e, browser: unknown, tabId: unknown) =>
+    validTab(browser, tabId) ? hub.closeTabs(browser, [tabId as number]) : false,
+  );
+  ipcMain.handle(IPC.focusTab, (_e, browser: unknown, tabId: unknown) =>
+    validTab(browser, tabId) ? hub.focusTab(browser, tabId as number) : false,
+  );
+  ipcMain.handle(IPC.sweepStart, () => sweep.start());
+  ipcMain.handle(IPC.sweepRun, (_e, keys: unknown) =>
+    Array.isArray(keys) && keys.every((k) => typeof k === 'string') ? sweep.run(keys) : 0,
+  );
+  ipcMain.handle(IPC.sweepUndo, () => sweep.undo());
 
   hub.on('change', () => {
     refreshTray();

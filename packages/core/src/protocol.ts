@@ -50,7 +50,29 @@ export interface CloseTabsCommand {
   tabIds: number[];
 }
 
-export type AppCommand = ListTabsCommand | CloseTabsCommand;
+/** Bring a tab to the front so the user can peek at it. */
+export interface FocusTabCommand {
+  type: 'focusTab';
+  v: number;
+  requestId: string;
+  tabId: number;
+}
+
+export interface TabToOpen {
+  url: string;
+  windowId?: number;
+  index?: number;
+}
+
+/** Reopen tabs (Undo). Falls back to the current window if the original one is gone. */
+export interface OpenTabsCommand {
+  type: 'openTabs';
+  v: number;
+  requestId: string;
+  tabs: TabToOpen[];
+}
+
+export type AppCommand = ListTabsCommand | CloseTabsCommand | FocusTabCommand | OpenTabsCommand;
 
 // ---------- Relay -> App (wraps helper messages with the connection id) ----------
 
@@ -90,9 +112,25 @@ export function parseAppCommand(x: unknown): AppCommand | null {
       return Array.isArray(x.tabIds) && x.tabIds.every((id) => Number.isInteger(id))
         ? (x as unknown as CloseTabsCommand)
         : null;
+    case 'focusTab':
+      return Number.isInteger(x.tabId) ? (x as unknown as FocusTabCommand) : null;
+    case 'openTabs':
+      return Array.isArray(x.tabs) && x.tabs.every(isTabToOpen)
+        ? (x as unknown as OpenTabsCommand)
+        : null;
     default:
       return null;
   }
+}
+
+function isTabToOpen(x: unknown): x is TabToOpen {
+  return (
+    isRec(x) &&
+    typeof x.url === 'string' &&
+    /^(https?|about|chrome|edge):/i.test(x.url) &&
+    (x.windowId === undefined || Number.isInteger(x.windowId)) &&
+    (x.index === undefined || Number.isInteger(x.index))
+  );
 }
 
 /** Returns a typed message, or null if the input is not a valid helper message. */
