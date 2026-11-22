@@ -35,7 +35,14 @@ tags = ["pii", "email"]
     '''@anthropic-ai/''',
   ]
 
-[allowlist]
+# The extension manifest "key" is a PUBLIC key (it pins the dev extension ID).
+# The matching private key was never stored. Exception is limited to this one rule and file.
+[[allowlists]]
+description = "Extension manifest public key"
+targetRules = ["generic-api-key"]
+paths = ['''apps/extension/manifest\.json$''']
+
+[[allowlists]]
 description = "Template and lock files"
 paths = [
   '''\.env\.example$''',
