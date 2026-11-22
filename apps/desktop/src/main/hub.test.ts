@@ -110,6 +110,21 @@ describe.runIf(process.platform === 'win32')('browser link (relay + hub)', () =>
     expect(after.connected).toEqual(['edge']);
   });
 
+  it('sends no updates while shutting down (the tray and window may already be gone)', async () => {
+    hub = new BrowserHub(pipe);
+    await hub.start();
+    const edge = startRelay();
+    edge.stdin!.write(
+      encodeNativeMessage({ type: 'tabs', v: PROTOCOL_VERSION, browser: 'edge', tabs: [tab(1)] }),
+    );
+    await waitFor(hub, (s) => s.total === 1);
+    let updatesAfterStop = 0;
+    hub.on('change', () => updatesAfterStop++);
+    await hub.stop();
+    await new Promise((r) => setTimeout(r, 300)); // let socket close events run
+    expect(updatesAfterStop).toBe(0);
+  });
+
   it('delivers a close command back to the browser as a native message', async () => {
     hub = new BrowserHub(pipe);
     await hub.start();

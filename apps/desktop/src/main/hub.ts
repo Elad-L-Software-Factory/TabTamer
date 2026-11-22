@@ -43,7 +43,12 @@ export class BrowserHub extends EventEmitter<{ change: [TabSummary] }> {
     });
   }
 
+  private stopped = false;
+
   stop(): Promise<void> {
+    // No more change events once stopping: listeners (tray, window) may already be gone.
+    this.stopped = true;
+    this.removeAllListeners('change');
     for (const c of this.connections.values()) c.socket.destroy();
     return new Promise((resolve) => (this.server ? this.server.close(() => resolve()) : resolve()));
   }
@@ -202,7 +207,7 @@ export class BrowserHub extends EventEmitter<{ change: [TabSummary] }> {
     } else if (message.type === 'tabs') {
       conn.browser = message.browser;
       this.registry.setTabs(message.browser, message.tabs);
-      this.emit('change', this.summary());
+      if (!this.stopped) this.emit('change', this.summary());
     } else {
       const waiting = this.pending.get(message.requestId);
       if (waiting) {
@@ -220,7 +225,7 @@ export class BrowserHub extends EventEmitter<{ change: [TabSummary] }> {
     const stillConnected = [...this.connections.values()].some((c) => c.browser === conn.browser);
     if (conn.browser && !stillConnected) {
       this.registry.removeBrowser(conn.browser);
-      this.emit('change', this.summary());
+      if (!this.stopped) this.emit('change', this.summary());
     }
   }
 }
