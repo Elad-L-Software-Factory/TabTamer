@@ -5,25 +5,25 @@ title = "TabTamer secret and personal-data scan"
 useDefault = true
 
 [[rules]]
-id = "anthropic-api-key"
-description = "Anthropic API key"
+id = "tabtamer-anthropic-key"
+description = "Anthropic API key (any length)"
 regex = '''sk-ant-[A-Za-z0-9_\-]{20,}'''
 tags = ["key", "anthropic"]
 
 [[rules]]
-id = "google-oauth-client-secret"
+id = "tabtamer-google-client-secret"
 description = "Google OAuth client secret"
 regex = '''GOCSPX-[A-Za-z0-9_\-]{10,}'''
 tags = ["key", "google"]
 
 [[rules]]
-id = "google-oauth-client-id"
+id = "tabtamer-google-client-id"
 description = "Real Google OAuth client ID (keep out of the repo)"
 regex = '''[0-9]{8,}-[a-z0-9]{20,}\.apps\.googleusercontent\.com'''
 tags = ["google"]
 
 [[rules]]
-id = "personal-email-address"
+id = "tabtamer-email-address"
 description = "Email address (personal data must never be committed)"
 regex = '''[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}'''
 tags = ["pii", "email"]
