@@ -1,0 +1,12 @@
+#!/bin/sh
+# Blocks any commit that contains a secret or personal data.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks is not installed. Install it (winget install Gitleaks.Gitleaks) before committing."
+  exit 1
+fi
+gitleaks git --staged --redact --no-banner --config .gitleaks.toml || {
+  echo ""
+  echo "pre-commit: BLOCKED. A secret or personal data was found in your staged changes."
+  echo "Remove it (put secrets in .env) and try again."
+  exit 1
+}
