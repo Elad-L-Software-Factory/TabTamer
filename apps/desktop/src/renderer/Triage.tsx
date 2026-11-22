@@ -3,6 +3,7 @@ import type { Theme, TriageAction } from '@tabtamer/core';
 import type { TriageCard, TriageState } from '../main/ipc';
 import { Favicon } from './Favicon';
 import { Picker } from './Picker';
+import { TabLink } from './TabLink';
 
 const COLOR: Record<string, string> = {
   blue: 'bg-blue-50 text-blue-800',
@@ -240,15 +241,13 @@ function Card({
           <Favicon url={card.favIconUrl} />
         </div>
         <div className="min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={() => void window.tabtamer.focusTab(card.browser, card.tabId)}
-            title="Show this tab in the browser"
-            className="block w-full truncate text-left text-sm font-semibold hover:text-brand-dark hover:underline"
-          >
-            {card.title}
-          </button>
-          <div className="truncate text-xs text-gray-400">{card.site}</div>
+          <TabLink
+            browser={card.browser}
+            tabId={card.tabId}
+            title={card.title}
+            sub={card.site}
+            bold
+          />
         </div>
       </div>
 

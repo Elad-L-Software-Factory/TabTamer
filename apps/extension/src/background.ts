@@ -102,7 +102,12 @@ function toTabInfo(t: chrome.tabs.Tab, groups: Map<number, string>): TabInfo | n
 
 async function sendSnapshot(): Promise<void> {
   if (!port) return;
-  const [tabs, groupList] = await Promise.all([chrome.tabs.query({}), chrome.tabGroups.query({})]);
+  // Only tabs the user can see in a normal browser window: no installed-app windows,
+  // sign-in or extension pop-ups, or other hidden window types.
+  const [tabs, groupList] = await Promise.all([
+    chrome.tabs.query({ windowType: 'normal' }),
+    chrome.tabGroups.query({}),
+  ]);
   const groups = new Map(groupList.map((g) => [g.id, g.title ?? '']));
   send({
     type: 'tabs',
@@ -256,9 +261,16 @@ async function handleCommand(raw: unknown): Promise<void> {
         await Promise.allSettled(cmd.tabIds.map((id) => chrome.tabs.remove(id)));
         break;
       case 'focusTab': {
+        // Go to the tab: select it, un-minimize its window if needed, bring the window forward.
         const tab = await chrome.tabs.update(cmd.tabId, { active: true });
-        if (tab?.windowId !== undefined)
-          await chrome.windows.update(tab.windowId, { focused: true });
+        if (tab?.windowId !== undefined) {
+          const win = await chrome.windows.get(tab.windowId);
+          await chrome.windows.update(tab.windowId, {
+            focused: true,
+            drawAttention: true,
+            ...(win.state === 'minimized' ? { state: 'normal' as const } : {}),
+          });
+        }
         break;
       }
       case 'openTabs':

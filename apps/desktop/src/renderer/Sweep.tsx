@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { SWEEP_GROUPS, type BrowserKind } from '@tabtamer/core';
 import type { SweepRow } from '../main/ipc';
 import { Favicon } from './Favicon';
+import { TabLink } from './TabLink';
 
 const LABEL: Record<BrowserKind, string> = { chrome: 'Chrome', edge: 'Edge' };
 
@@ -139,22 +140,15 @@ export function Sweep({
                           />
                           <Favicon url={r.favIconUrl} />
                           <div className="min-w-0 flex-1">
-                            <button
-                              type="button"
-                              onClick={() => void window.tabtamer.focusTab(r.browser, r.tabId)}
-                              title="Show this tab in the browser"
-                              className="block w-full truncate text-left text-sm hover:text-brand-dark hover:underline"
-                            >
-                              {r.title}
-                            </button>
-                            <div
-                              className="truncate text-xs text-gray-400"
-                              title={
+                            <TabLink
+                              browser={r.browser}
+                              tabId={r.tabId}
+                              title={r.title}
+                              sub={`${r.site} · ${g.why}`}
+                              subTitle={
                                 r.keepTitle ? `The copy that stays open: ${r.keepTitle}` : undefined
                               }
-                            >
-                              {r.site} · {g.why}
-                            </div>
+                            />
                           </div>
                           <span className="shrink-0 text-xs text-gray-400">{LABEL[r.browser]}</span>
                         </li>
