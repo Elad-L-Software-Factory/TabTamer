@@ -72,13 +72,19 @@ export function Home({ onTame, onSaved }: { onTame: () => void; onSaved: () => v
       ) : (
         <TabList tabs={tabs} />
       )}
+      <footer
+        className="px-5 py-1.5 text-center text-[11px] text-gray-400 select-all"
+        title="The app version and build you are running"
+      >
+        {state.version}
+      </footer>
     </main>
   );
 }
 
 function TabList({ tabs }: { tabs: BrowserTab[] }) {
   return (
-    <ul className="flex-1 overflow-y-auto px-3 pb-20">
+    <ul className="flex-1 overflow-y-auto px-3 pb-2">
       {tabs.map((t) => (
         <li
           key={`${t.browser}-${t.id}`}

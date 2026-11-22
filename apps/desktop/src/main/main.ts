@@ -13,6 +13,7 @@ import { Store } from './store';
 import { SweepSession } from './sweepSession';
 import { TriageSession } from './triageSession';
 import { trayIcon } from './trayIcon';
+import { versionLabel } from './version';
 
 const BROWSER_LABEL: Record<BrowserKind, string> = { chrome: 'Chrome', edge: 'Edge' };
 const ACTIONS: TriageAction[] = ['forget', 'save', 'theme'];
@@ -40,6 +41,7 @@ function state(): AppState {
     summary: hub.summary(),
     tabs: hub.registry.allTabs(),
     savedCount: store?.saved.length ?? 0,
+    version: versionLabel(),
   };
 }
 
@@ -50,8 +52,14 @@ function tooltip(): string {
   return `TabTamer: ${s.total} tabs open (${parts.join(', ')})`;
 }
 
+/** Send to the screens only while the window is alive (not during shutdown). */
+function sendToWindow(channel: string, payload: unknown): void {
+  if (quitting || !win || win.isDestroyed()) return;
+  win.webContents.send(channel, payload);
+}
+
 function refreshTray(): void {
-  if (!tray) return;
+  if (quitting || !tray || tray.isDestroyed()) return;
   const s = hub.summary();
   tray.setImage(trayIcon(s.connected.length ? s.total : null));
   tray.setToolTip(tooltip());
@@ -118,7 +126,7 @@ async function start(): Promise<void> {
       : null;
   const meter = new CostMeter(store.settings.spend, store.settings.monthlyCapUsd);
   triage = new TriageSession(hub, store, provider, meter);
-  triage.on('update', (s) => win?.webContents.send(IPC.triageState, s));
+  triage.on('update', (s) => sendToWindow(IPC.triageState, s));
 
   ipcMain.handle(IPC.triageStart, () => triage.start(sweep.closedKeys()));
   ipcMain.handle(IPC.triageAct, (_e, key: unknown, action: unknown, target: unknown) =>
@@ -143,7 +151,7 @@ async function start(): Promise<void> {
 
   hub.on('change', () => {
     refreshTray();
-    win?.webContents.send(IPC.state, state());
+    sendToWindow(IPC.state, state());
   });
 
   try {
@@ -155,6 +163,8 @@ async function start(): Promise<void> {
   tray = new Tray(trayIcon(null));
   tray.setContextMenu(
     Menu.buildFromTemplate([
+      { label: versionLabel(), enabled: false },
+      { type: 'separator' },
       { label: 'Open TabTamer', click: showWindow },
       { type: 'separator' },
       {
