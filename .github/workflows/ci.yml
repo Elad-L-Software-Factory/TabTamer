@@ -23,17 +23,4 @@ jobs:
       - name: Scan full history
         run: gitleaks git --redact --no-banner --config .gitleaks.toml .
 
-  build-and-test:
-    name: Lint and test
-    runs-on: ubuntu-latest
-    if: hashFiles('package.json') != ''
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm test
+  # Lint and test jobs are added in milestone M1, together with the first code.
