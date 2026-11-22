@@ -36,6 +36,52 @@ describe('parseAppCommand', () => {
     ).toBeNull();
   });
 
+  it('accepts triage commands and rejects malformed ones', () => {
+    const v = PROTOCOL_VERSION;
+    expect(
+      parseAppCommand({ type: 'getPageTexts', v, requestId: 'a', tabIds: [1, 2] }),
+    ).not.toBeNull();
+    expect(
+      parseAppCommand({
+        type: 'moveToGroup',
+        v,
+        requestId: 'b',
+        tabIds: [1],
+        groupTitle: '💼 Job Search',
+        groupColor: 'blue',
+      }),
+    ).not.toBeNull();
+    expect(
+      parseAppCommand({
+        type: 'moveToGroup',
+        v,
+        requestId: 'b',
+        tabIds: [],
+        groupTitle: 'x',
+        groupColor: 'blue',
+      }),
+    ).toBeNull();
+    expect(
+      parseAppCommand({
+        type: 'restoreTabs',
+        v,
+        requestId: 'c',
+        moves: [{ tabId: 1, windowId: 2, index: 0 }],
+      }),
+    ).not.toBeNull();
+    expect(
+      parseAppCommand({ type: 'restoreTabs', v, requestId: 'c', moves: [{ tabId: 1 }] }),
+    ).toBeNull();
+    expect(
+      parseHelperMessage({
+        type: 'pageTexts',
+        v,
+        requestId: 'a',
+        texts: [{ tabId: 1, text: 'hi' }],
+      }),
+    ).not.toBeNull();
+  });
+
   it('rejects bad tab ids, missing request ids and unknown commands', () => {
     expect(
       parseAppCommand({ type: 'closeTabs', v: PROTOCOL_VERSION, requestId: 'b', tabIds: ['1'] }),

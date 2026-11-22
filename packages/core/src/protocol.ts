@@ -31,9 +31,19 @@ export interface ResultMessage {
   requestId: string;
   ok: boolean;
   error?: string;
+  /** moveToGroup: the window the tabs ended up in. */
+  windowId?: number;
 }
 
-export type HelperMessage = HelloMessage | TabsMessage | ResultMessage;
+/** Reply to getPageTexts. Tabs whose text could not be read are left out. */
+export interface PageTextsMessage {
+  type: 'pageTexts';
+  v: number;
+  requestId: string;
+  texts: { tabId: number; text: string }[];
+}
+
+export type HelperMessage = HelloMessage | TabsMessage | ResultMessage | PageTextsMessage;
 
 // ---------- App -> Helper ----------
 
@@ -72,7 +82,44 @@ export interface OpenTabsCommand {
   tabs: TabToOpen[];
 }
 
-export type AppCommand = ListTabsCommand | CloseTabsCommand | FocusTabCommand | OpenTabsCommand;
+/** Read the first part of each page's visible text (for the AI summary). */
+export interface GetPageTextsCommand {
+  type: 'getPageTexts';
+  v: number;
+  requestId: string;
+  tabIds: number[];
+}
+
+/**
+ * Move tabs into a theme window and label them with a tab group.
+ * If windowId is missing or that window is gone, a new window is created.
+ */
+export interface MoveToGroupCommand {
+  type: 'moveToGroup';
+  v: number;
+  requestId: string;
+  tabIds: number[];
+  windowId?: number;
+  groupTitle: string;
+  groupColor: string;
+}
+
+/** Undo a move: take tabs out of their group and put them back where they were. */
+export interface RestoreTabsCommand {
+  type: 'restoreTabs';
+  v: number;
+  requestId: string;
+  moves: { tabId: number; windowId: number; index: number }[];
+}
+
+export type AppCommand =
+  | ListTabsCommand
+  | CloseTabsCommand
+  | FocusTabCommand
+  | OpenTabsCommand
+  | GetPageTextsCommand
+  | MoveToGroupCommand
+  | RestoreTabsCommand;
 
 // ---------- Relay -> App (wraps helper messages with the connection id) ----------
 
@@ -88,6 +135,8 @@ export interface RelayEnvelope {
 type Rec = Record<string, unknown>;
 const isRec = (x: unknown): x is Rec => typeof x === 'object' && x !== null && !Array.isArray(x);
 const isBrowser = (x: unknown): x is BrowserKind => BROWSERS.includes(x as BrowserKind);
+const isIntArray = (x: unknown): x is number[] =>
+  Array.isArray(x) && x.every((n) => Number.isInteger(n));
 
 export function isTabInfo(x: unknown): x is TabInfo {
   return (
@@ -114,6 +163,27 @@ export function parseAppCommand(x: unknown): AppCommand | null {
         : null;
     case 'focusTab':
       return Number.isInteger(x.tabId) ? (x as unknown as FocusTabCommand) : null;
+    case 'getPageTexts':
+      return isIntArray(x.tabIds) ? (x as unknown as GetPageTextsCommand) : null;
+    case 'moveToGroup':
+      return isIntArray(x.tabIds) &&
+        x.tabIds.length > 0 &&
+        (x.windowId === undefined || Number.isInteger(x.windowId)) &&
+        typeof x.groupTitle === 'string' &&
+        typeof x.groupColor === 'string'
+        ? (x as unknown as MoveToGroupCommand)
+        : null;
+    case 'restoreTabs':
+      return Array.isArray(x.moves) &&
+        x.moves.every(
+          (m) =>
+            isRec(m) &&
+            Number.isInteger(m.tabId) &&
+            Number.isInteger(m.windowId) &&
+            Number.isInteger(m.index),
+        )
+        ? (x as unknown as RestoreTabsCommand)
+        : null;
     case 'openTabs':
       return Array.isArray(x.tabs) && x.tabs.every(isTabToOpen)
         ? (x as unknown as OpenTabsCommand)
@@ -148,6 +218,12 @@ export function parseHelperMessage(x: unknown): HelperMessage | null {
     case 'result':
       return typeof x.requestId === 'string' && typeof x.ok === 'boolean'
         ? (x as unknown as ResultMessage)
+        : null;
+    case 'pageTexts':
+      return typeof x.requestId === 'string' &&
+        Array.isArray(x.texts) &&
+        x.texts.every((t) => isRec(t) && Number.isInteger(t.tabId) && typeof t.text === 'string')
+        ? (x as unknown as PageTextsMessage)
         : null;
     default:
       return null;

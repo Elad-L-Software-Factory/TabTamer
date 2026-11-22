@@ -15,6 +15,10 @@ export interface TabInfo {
   active: boolean;
   /** Epoch milliseconds when the tab was last active, if the browser reports it. */
   lastAccessed?: number;
+  /** Title of the tab group the tab is in (theme windows use "💼 Job Search" style labels). */
+  groupTitle?: string;
+  /** Chrome unloaded the tab to save memory; its page text can't be read without reloading. */
+  discarded?: boolean;
 }
 
 export interface BrowserTab extends TabInfo {
