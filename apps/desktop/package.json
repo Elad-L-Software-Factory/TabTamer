@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@tabtamer/brand": "workspace:*",
-    "@tabtamer/core": "workspace:*"
+    "@tabtamer/core": "workspace:*",
+    "@tabtamer/llm": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.5",

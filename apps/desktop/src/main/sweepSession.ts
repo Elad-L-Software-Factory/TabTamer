@@ -87,6 +87,11 @@ export class SweepSession {
     return closed;
   }
 
+  /** Keys of tabs the last sweep closed (the browser may not have reported them gone yet). */
+  closedKeys(): string[] {
+    return (this.lastClosed?.tabs ?? []).map((t) => tabKey(t.browser, t.id));
+  }
+
   /** Reopen the last swept tabs. Returns how many were reopened (0 if too late or nothing). */
   undo(now = Date.now()): number {
     const batch = this.lastClosed;

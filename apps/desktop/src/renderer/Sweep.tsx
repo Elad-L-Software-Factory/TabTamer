@@ -75,10 +75,11 @@ export function Sweep({
           <p className="text-gray-600">No junk or duplicate tabs right now. Nice and tidy!</p>
           <button
             type="button"
-            onClick={onCancel}
+            onClick={() => onDone(0)}
+            autoFocus
             className="mt-4 rounded-xl bg-brand px-6 py-2.5 font-semibold text-white hover:bg-brand-dark"
           >
-            Back
+            Next: go through my tabs
           </button>
         </section>
       ) : (
@@ -176,8 +177,9 @@ export function Sweep({
             </button>
             <button
               type="button"
-              onClick={onCancel}
+              onClick={() => onDone(0)}
               className="rounded-xl border border-gray-300 px-5 text-gray-700 hover:bg-gray-50"
+              title="Keep these open and go to the next step"
             >
               Skip
             </button>

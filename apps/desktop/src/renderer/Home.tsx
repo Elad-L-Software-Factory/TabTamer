@@ -6,7 +6,7 @@ import { Favicon } from './Favicon';
 const LABEL: Record<BrowserKind, string> = { chrome: 'Chrome', edge: 'Edge' };
 const ALL: BrowserKind[] = ['chrome', 'edge'];
 
-export function Home({ onTame }: { onTame: () => void }) {
+export function Home({ onTame, onSaved }: { onTame: () => void; onSaved: () => void }) {
   const [state, setState] = useState<AppState | null>(null);
 
   useEffect(() => {
@@ -53,6 +53,13 @@ export function Home({ onTame }: { onTame: () => void }) {
           className="mt-6 w-full rounded-xl bg-brand py-3 text-lg font-semibold text-white hover:bg-brand-dark disabled:opacity-50"
         >
           Tame my tabs
+        </button>
+        <button
+          type="button"
+          onClick={onSaved}
+          className="mt-3 text-sm text-brand-dark hover:underline"
+        >
+          Saved tabs ({state.savedCount})
         </button>
       </section>
 

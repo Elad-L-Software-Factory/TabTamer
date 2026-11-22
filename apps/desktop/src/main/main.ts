@@ -4,13 +4,21 @@
  */
 import path from 'node:path';
 import { app, BrowserWindow, ipcMain, Menu, Tray } from 'electron';
-import { BROWSERS, type BrowserKind } from '@tabtamer/core';
+import { BROWSERS, type BrowserKind, type TriageAction } from '@tabtamer/core';
+import { ClaudeProvider, CostMeter } from '@tabtamer/llm';
+import { hasClaudeSignIn, loadApiKey } from './apiKey';
 import { BrowserHub } from './hub';
 import { IPC, type AppState } from './ipc';
+import { Store } from './store';
 import { SweepSession } from './sweepSession';
+import { TriageSession } from './triageSession';
 import { trayIcon } from './trayIcon';
 
 const BROWSER_LABEL: Record<BrowserKind, string> = { chrome: 'Chrome', edge: 'Edge' };
+const ACTIONS: TriageAction[] = ['forget', 'save', 'theme'];
+
+// App data lives in %APPDATA%\TabTamer (until M4 moves it to Google Drive).
+app.setName('TabTamer');
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -24,9 +32,15 @@ let win: BrowserWindow | null = null;
 let quitting = false;
 const hub = new BrowserHub();
 const sweep = new SweepSession(hub);
+let store: Store;
+let triage: TriageSession;
 
 function state(): AppState {
-  return { summary: hub.summary(), tabs: hub.registry.allTabs() };
+  return {
+    summary: hub.summary(),
+    tabs: hub.registry.allTabs(),
+    savedCount: store?.saved.length ?? 0,
+  };
 }
 
 function tooltip(): string {
@@ -94,6 +108,38 @@ async function start(): Promise<void> {
     Array.isArray(keys) && keys.every((k) => typeof k === 'string') ? sweep.run(keys) : 0,
   );
   ipcMain.handle(IPC.sweepUndo, () => sweep.undo());
+
+  store = new Store(app.getPath('userData'));
+  // Claude access: a key (.env / environment) or the `ant auth login` browser sign-in.
+  const apiKey = loadApiKey(app.getAppPath());
+  const provider =
+    apiKey || hasClaudeSignIn()
+      ? new ClaudeProvider(apiKey ? { apiKey } : {}, store.settings.model)
+      : null;
+  const meter = new CostMeter(store.settings.spend, store.settings.monthlyCapUsd);
+  triage = new TriageSession(hub, store, provider, meter);
+  triage.on('update', (s) => win?.webContents.send(IPC.triageState, s));
+
+  ipcMain.handle(IPC.triageStart, () => triage.start(sweep.closedKeys()));
+  ipcMain.handle(IPC.triageAct, (_e, key: unknown, action: unknown, target: unknown) =>
+    typeof key === 'string' && ACTIONS.includes(action as TriageAction)
+      ? triage.act(key, action as TriageAction, typeof target === 'string' ? target : undefined)
+      : false,
+  );
+  ipcMain.handle(IPC.triageAcceptAll, () => triage.acceptAll());
+  ipcMain.handle(IPC.triageUndo, () => triage.undo());
+  ipcMain.handle(IPC.savedList, () => store.saved);
+  ipcMain.handle(IPC.savedOpen, (_e, id: unknown) => {
+    const s = store.saved.find((x) => x.id === id);
+    if (!s) return false;
+    const browser = hub.summary().connected.includes(s.browser)
+      ? s.browser
+      : hub.summary().connected[0];
+    return browser ? hub.openTabs(browser, [{ url: s.url }]) : false;
+  });
+  ipcMain.handle(IPC.savedDelete, (_e, id: unknown) =>
+    typeof id === 'string' ? Boolean(store.removeSaved(id)) : false,
+  );
 
   hub.on('change', () => {
     refreshTray();

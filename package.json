@@ -16,6 +16,7 @@
     "test": "vitest run",
     "dev": "pnpm --filter @tabtamer/extension run build && pnpm --filter @tabtamer/desktop run dev",
     "smoke": "node apps/desktop/scripts/smoke-edge.mjs",
+    "ai-check": "node apps/desktop/scripts/ai-check.mjs",
     "register-host": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/register-native-host.ps1"
   },
   "devDependencies": {
