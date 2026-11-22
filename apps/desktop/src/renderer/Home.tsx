@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { BrowserKind, BrowserTab } from '@tabtamer/core';
 import type { AppState } from '../main/ipc';
+import { Favicon } from './Favicon';
 
 const LABEL: Record<BrowserKind, string> = { chrome: 'Chrome', edge: 'Edge' };
 const ALL: BrowserKind[] = ['chrome', 'edge'];
 
-export function Home() {
+export function Home({ onTame }: { onTame: () => void }) {
   const [state, setState] = useState<AppState | null>(null);
 
   useEffect(() => {
@@ -46,9 +47,10 @@ export function Home() {
         </div>
         <button
           type="button"
-          disabled
-          className="mt-6 w-full rounded-xl bg-brand py-3 text-lg font-semibold text-white opacity-50"
-          title="Coming in the next version"
+          disabled={noneConnected || summary.total === 0}
+          onClick={onTame}
+          autoFocus
+          className="mt-6 w-full rounded-xl bg-brand py-3 text-lg font-semibold text-white hover:bg-brand-dark disabled:opacity-50"
         >
           Tame my tabs
         </button>
@@ -68,17 +70,13 @@ export function Home() {
 
 function TabList({ tabs }: { tabs: BrowserTab[] }) {
   return (
-    <ul className="flex-1 overflow-y-auto px-3 pb-3">
+    <ul className="flex-1 overflow-y-auto px-3 pb-20">
       {tabs.map((t) => (
         <li
           key={`${t.browser}-${t.id}`}
           className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white"
         >
-          {t.favIconUrl?.startsWith('http') || t.favIconUrl?.startsWith('data:') ? (
-            <img src={t.favIconUrl} alt="" className="h-4 w-4 shrink-0" />
-          ) : (
-            <span className="h-4 w-4 shrink-0 rounded bg-gray-200" />
-          )}
+          <Favicon url={t.favIconUrl} />
           <span className="min-w-0 flex-1 truncate text-sm" title={t.url}>
             {t.title || t.url}
           </span>
