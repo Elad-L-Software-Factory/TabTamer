@@ -1,0 +1,31 @@
+{
+  "name": "@tabtamer/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TabTamer (by Elad Lavi)",
+  "author": "Elad Lavi",
+  "type": "module",
+  "main": "dist/main/main.cjs",
+  "scripts": {
+    "build": "node build.mjs && vite build",
+    "dev": "node build.mjs && vite build && electron .",
+    "start": "electron .",
+    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json"
+  },
+  "dependencies": {
+    "@tabtamer/brand": "workspace:*",
+    "@tabtamer/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "electron": "^45.4.1",
+    "esbuild": "^0.28.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tailwindcss": "^4.3.5",
+    "vite": "^8.3.8"
+  }
+}
