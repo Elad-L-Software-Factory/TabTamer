@@ -5,6 +5,8 @@ export type BrowserKind = (typeof BROWSERS)[number];
 export interface TabInfo {
   id: number;
   windowId: number;
+  /** Position in its window (used to reopen a tab in the same place on Undo). */
+  index?: number;
   url: string;
   title: string;
   favIconUrl?: string;

@@ -11,6 +11,31 @@ describe('parseAppCommand', () => {
     ).toMatchObject({ tabIds: [1, 2] });
   });
 
+  it('accepts focusTab and openTabs, and rejects unsafe URLs to open', () => {
+    expect(
+      parseAppCommand({ type: 'focusTab', v: PROTOCOL_VERSION, requestId: 'f', tabId: 3 }),
+    ).toMatchObject({ tabId: 3 });
+    expect(
+      parseAppCommand({
+        type: 'openTabs',
+        v: PROTOCOL_VERSION,
+        requestId: 'o',
+        tabs: [{ url: 'https://example.com', windowId: 1, index: 2 }, { url: 'about:blank' }],
+      }),
+    ).not.toBeNull();
+    expect(
+      parseAppCommand({
+        type: 'openTabs',
+        v: PROTOCOL_VERSION,
+        requestId: 'o',
+        tabs: [{ url: 'javascript:alert(1)' }],
+      }),
+    ).toBeNull();
+    expect(
+      parseAppCommand({ type: 'focusTab', v: PROTOCOL_VERSION, requestId: 'f', tabId: 'x' }),
+    ).toBeNull();
+  });
+
   it('rejects bad tab ids, missing request ids and unknown commands', () => {
     expect(
       parseAppCommand({ type: 'closeTabs', v: PROTOCOL_VERSION, requestId: 'b', tabIds: ['1'] }),
