@@ -84,6 +84,7 @@ function toTabInfo(t: chrome.tabs.Tab): TabInfo | null {
   const info: TabInfo = {
     id: t.id,
     windowId: t.windowId,
+    index: t.index,
     url: t.url ?? t.pendingUrl ?? '',
     title: t.title ?? '',
     pinned: t.pinned,
@@ -114,6 +115,18 @@ function scheduleSnapshot(): void {
 
 // ---------- Commands from the app ----------
 
+async function openTab(url: string, windowId?: number, index?: number): Promise<void> {
+  // Browser pages like chrome://newtab cannot be opened by extensions; a new tab is the same thing.
+  const safeUrl = /^(chrome|edge):\/\/(newtab|new-tab-page)/i.test(url) ? undefined : url;
+  const props: chrome.tabs.CreateProperties = { active: false };
+  if (safeUrl) props.url = safeUrl;
+  try {
+    await chrome.tabs.create({ ...props, windowId, index });
+  } catch {
+    await chrome.tabs.create(props); // original window was closed
+  }
+}
+
 async function handleCommand(raw: unknown): Promise<void> {
   const cmd: AppCommand | null = parseAppCommand(raw);
   if (!cmd) return;
@@ -123,7 +136,20 @@ async function handleCommand(raw: unknown): Promise<void> {
         await sendSnapshot();
         break;
       case 'closeTabs':
-        if (cmd.tabIds.length > 0) await chrome.tabs.remove(cmd.tabIds);
+        // One by one, so a tab the user already closed doesn't stop the rest.
+        await Promise.allSettled(cmd.tabIds.map((id) => chrome.tabs.remove(id)));
+        break;
+      case 'focusTab': {
+        const tab = await chrome.tabs.update(cmd.tabId, { active: true });
+        if (tab?.windowId !== undefined)
+          await chrome.windows.update(tab.windowId, { focused: true });
+        break;
+      }
+      case 'openTabs':
+        // In original order so saved positions stay correct.
+        for (const t of [...cmd.tabs].sort((a, b) => (a.index ?? 0) - (b.index ?? 0))) {
+          await openTab(t.url, t.windowId, t.index);
+        }
         break;
     }
     send({ type: 'result', v: PROTOCOL_VERSION, requestId: cmd.requestId, ok: true });
@@ -146,6 +172,7 @@ chrome.tabs.onReplaced.addListener(scheduleSnapshot);
 chrome.tabs.onAttached.addListener(scheduleSnapshot);
 chrome.tabs.onDetached.addListener(scheduleSnapshot);
 chrome.tabs.onActivated.addListener(scheduleSnapshot);
+chrome.tabs.onMoved.addListener(scheduleSnapshot);
 chrome.tabs.onUpdated.addListener((_id, change) => {
   if (
     change.url !== undefined ||
